@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Canvas画图Demo</title>
+    <style>
+        #demo {
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+            border: 1px solid #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="demo"></div>
+    <script type="text/javascript" src="canvas-draw.js"></script>
+    <script>
+        var $div = document.getElementById('demo');
+        var canvasDraw = new CanvasDraw({
+          id: 'demo',
+          bgImg: './test.jpg',
+          width: $div.clientWidth,
+          height: $div.clientHeight
+        })
+        canvasDraw.init();
+    </script>
+</body>
+</html>
