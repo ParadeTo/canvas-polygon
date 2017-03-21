@@ -14,16 +14,29 @@
 </head>
 <body>
     <div id="demo"></div>
+    <button id="btn">确定</button>
+    <button id="reset">重置</button>
     <script type="text/javascript" src="canvas-draw.js"></script>
     <script>
         var $div = document.getElementById('demo');
         var canvasDraw = new CanvasDraw({
+          polygons: [
+            {text: '区块1', active:true, points:[{x: 0,y:0},{x:0.5,y:0.5},{x:0,y:0.5}]},
+            {text: '区块2', active:false, points:[{x: 0.5,y:0.2},{x:0.3,y:0.4},{x:0.7,y:0.4}]},
+            {text: '区块3', active:false, points:[{x: 0.2,y:0},{x:0.4,y:0.8},{x:0.2,y:0.5}]},
+          ],
           id: 'demo',
           bgImg: './test.jpg',
           width: $div.clientWidth,
           height: $div.clientHeight
         })
         canvasDraw.init();
+        btn.onclick = function() {
+          console.log(canvasDraw.getPolygonsData());
+        }
+        reset.onclick = function() {
+          canvasDraw.clean();
+        }
     </script>
 </body>
 </html>

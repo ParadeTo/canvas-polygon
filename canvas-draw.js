@@ -8,15 +8,18 @@ function CanvasDraw(config) {
     bgImg: config.bgImg,
     height: config.height,
     width: config.width,
-    pointColor: config.pointColor || '#ab7784',
+    pointColor: config.pointColor || '#3c8dbc',
     pointSize: config.pointSize || 3,
-    lineColor: config.lineColor || '#34ff68',
+    lineColor: config.lineColor || '#80b5b3',
     lineSize: config.lineSize || 1,
-    polygonFillColor: config.polygonFillColor || 'rgba(125,65,141,0.8)',
-    polygonPointlColor: config.polygonPointlColor || 'rgb(45,65,156)',
+    textColor: config.textColor || '#333',
+    polygonFillColor: config.polygonFillColor || 'rgba(90,214,244,0.8)',
+    polygonPointlColor: config.polygonPointlColor || '#00c0ef',
     polygonPointlSize: config.polygonPointlSize || 2,
-    polygonLineColor: config.polygonLineColor || 'rgb(241,156,41)',
-    polygonLineSize: config.polygonLineSize || 1
+    polygonLineColor: config.polygonLineColor || '#5ad6f4',
+    polygonLineSize: config.polygonLineSize || 1,
+    polygonActiveFillColor: config.polygonFillColor || 'rgba(97,255,105,0.8)',
+    polygonActiveLineColor: config.polygonFillColor || '#61ff69',
   }
   this.cxt = null;
   this.canvas = null;
@@ -38,12 +41,17 @@ function CanvasDraw(config) {
   // 图像
   this.img = null;
   this.imgLoaded = false;
+  this.imgW = 0;
+  this.imgH = 0;
 
   // 未闭合的多边形的点
   this.points = [];
 
-  // 多边形
+  // 此次绘画所画多边形
   this.polygons = [];
+
+  // 画布初始时的多边形，不能更改
+  this._polygons = config.polygons || [];
 }
 
 CanvasDraw.prototype.init = function () {
@@ -55,6 +63,7 @@ CanvasDraw.prototype.init = function () {
   this.canvas.height = this.config.height;
 
   canvasDiv.appendChild(this.canvas);
+
   this.getDrawBgConf();
   this.initEventListener();
 
@@ -64,6 +73,24 @@ CanvasDraw.prototype.init = function () {
   })
 }
 
+CanvasDraw.prototype.initPolygons = function () {
+  // 坐标转换，画图
+  var len = this._polygons.length;
+  for (var i = 0; i < len; i++) {
+    var pointNum = this._polygons[i].points.length;
+    for (var j = 0; j < pointNum; j++) {
+      this._polygons[i].points[j].x = this.bound.lt.x + (this._polygons[i].points[j].x * this.bound.w);
+      this._polygons[i].points[j].y = this.bound.lt.y + (this._polygons[i].points[j].y * this.bound.h);
+    }
+    var params = [this._polygons[i].points, this._polygons[i].text];
+    if (this._polygons[i].active) {
+      params.push(this.config.polygonActiveLineColor);
+      params.push(this.config.polygonActiveFillColor);
+    }
+    this.drawPolygon.apply(this, params);
+  }
+}
+
 CanvasDraw.prototype.getDrawBgConf = function () {
   var me = this;
   var image = new Image();
@@ -71,6 +98,8 @@ CanvasDraw.prototype.getDrawBgConf = function () {
   image.onload = function () {
     me.imgLoaded = true;
     me.img = image;
+    me.imgW = image.width;
+    me.imgH = image.height;
 
     var wScale = image.width / me.canvas.width;
     var hScale = image.height / me.canvas.height;
@@ -94,6 +123,7 @@ CanvasDraw.prototype.getDrawBgConf = function () {
     me.bound.rb.y = dy + _height;
 
     me.cxt.drawImage(image, dx, dy, _width, _height);
+    me.initPolygons();
   }
 }
 
@@ -115,7 +145,7 @@ CanvasDraw.prototype.drawLine = function (x1, y1, x2, y2, color, size) {
   cxt.stroke();
 }
 
-CanvasDraw.prototype.drawPolygon = function (points) {
+CanvasDraw.prototype.drawPolygon = function (points, text, lineColor, fillColor) {
   var len = points.length;
   if (len < 3) {
     console.log('点不够呀！');
@@ -123,13 +153,13 @@ CanvasDraw.prototype.drawPolygon = function (points) {
   }
 
   var cxt = this.cxt;
-  for (var i = 0; i < len; i++) {
-    // 点
-    this.drawPoint(points[i].x, points[i].y);
-  }
+  // for (var i = 0; i < len; i++) {
+  //   // 点
+  //   this.drawPoint(points[i].x, points[i].y);
+  // }
   cxt.beginPath();
-  cxt.strokeStyle = this.config.polygonLineColor;
-  cxt.fillStyle = this.config.polygonFillColor;
+  cxt.strokeStyle = lineColor || this.config.polygonLineColor;
+  cxt.fillStyle = fillColor || this.config.polygonFillColor;
   for (var i = 0; i < len; i++) {
     // 画线
     if (i === 0) {
@@ -143,6 +173,21 @@ CanvasDraw.prototype.drawPolygon = function (points) {
   cxt.stroke();
   cxt.closePath();
   cxt.fill();
+
+  // 文字
+  if (!text) return;
+  var cx = 0, cy = 0;
+  for (var i = 0; i < len; i++) {
+    cx += points[i].x;
+    cy += points[i].y;
+  }
+  cx /= len;
+  cy /= len;
+
+  cxt.fillStyle = this.config.textColor;
+  cxt.font = 'normal 14px Microsoft YaHei';
+  cxt.textAlign = 'center';
+  cxt.fillText(text, cx, cy);
 }
 
 CanvasDraw.prototype.reDraw = function() {
@@ -164,6 +209,14 @@ CanvasDraw.prototype.reDraw = function() {
     me.drawPoint(me.points[pLen-1].x, me.points[pLen-1].y);
   }
   // 画多边形
+  for (var i = 0; i < me._polygons.length; i++) {
+    var params = [me._polygons[i].points, me._polygons[i].text];
+    if (me._polygons[i].active) {
+      params.push(me.config.polygonActiveLineColor);
+      params.push(me.config.polygonActiveFillColor);
+    }
+    me.drawPolygon.apply(this, params);
+  }
   for (var i = 0; i < me.polygons.length; i++) {
     me.drawPolygon(me.polygons[i]);
   }
@@ -208,6 +261,8 @@ CanvasDraw.prototype.initEventListener = function() {
   });
 
   me.addHandler(me.canvas, 'mousemove', function(e) {
+    me.reDraw();
+
     if (me.points.length === 0) {
       return;
     }
@@ -217,8 +272,6 @@ CanvasDraw.prototype.initEventListener = function() {
 
     var lastX = me.points[me.points.length - 1].x;
     var lastY = me.points[me.points.length - 1].y;
-
-    me.reDraw();
 
     me.drawLine(lastX, lastY, x, y);
   });
@@ -238,4 +291,27 @@ CanvasDraw.prototype.addHandler = function (ele, type, handler) {
   } else {
     ele['on'+type] = handler;
   }
+}
+
+CanvasDraw.prototype.getPolygonsData = function () {
+  var _polygons = [];
+  var len = this.polygons.length;
+  console.log(this.bound);
+  for (var i = 0; i < len; i++) {
+    var pN = this.polygons[i].length;
+    _polygons[i] = [];
+    for (var j = 0; j < pN; j++) {
+      console.log(this.polygons[i][j]);
+      _polygons[i].push({
+        x: (this.polygons[i][j].x - this.bound.lt.x) / this.bound.w,
+        y: (this.polygons[i][j].y - this.bound.lt.y) / this.bound.h
+      });
+    }
+  }
+  return _polygons;
+}
+
+CanvasDraw.prototype.clean = function() {
+  this.polygons = [];
+  this.reDraw();
 }
