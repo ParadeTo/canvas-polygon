@@ -22,6 +22,7 @@ function CanvasDrawHeatMap(config) {
 
   this.heatmapInstance = null;
   this.heatMapWrapper = null;
+  this.obj = null;
 }
 
 inheritPrototype(CanvasDrawHeatMap, CanvasDraw);
@@ -48,11 +49,12 @@ CanvasDrawHeatMap.prototype.heatMapInit = function(cb) {
     obj.style.height = me.canvas.height + 'px';
     obj.style.top = me.lt.y + 'px';
     obj.style.left = me.lt.x + 'px';
-    obj.style.zIndex = 98;
+    obj.style.zIndex = 98; // 位于背景图片上面，多边形图层下面
     var objHeatWrapper = document.createElement("div");
     objHeatWrapper.style.width = '100%';
     objHeatWrapper.style.height = '100%';
     me.heatMapWrapper = objHeatWrapper;
+    me.obj = obj;
 
     obj.appendChild(objHeatWrapper);
     me.wrapper.appendChild(obj);
@@ -67,4 +69,16 @@ CanvasDrawHeatMap.prototype.drawHeatMap = function (data) {
   me.config.heatMapConf.container = me.heatMapWrapper;
   me.heatmapInstance = h337.create(me.config.heatMapConf);
   me.heatmapInstance.setData(data);
+}
+
+CanvasDrawHeatMap.prototype.deleteHeatMap = function (cb) {
+  var me = this;
+  this.delete(function() {
+    if (!me.obj) return;
+    var _parentElement = me.obj.parentNode;
+    if(_parentElement){
+      _parentElement.removeChild(me.obj);
+      typeof cb === 'function' && cb();
+    }
+  });
 }
